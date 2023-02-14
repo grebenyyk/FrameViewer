@@ -1,4 +1,5 @@
 import contextlib
+import pathlib
 import tkinter as tk
 from tkinter import filedialog
 import numpy as np
@@ -8,19 +9,20 @@ import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import skimage.exposure as exposure
+import ast
 
 matplotlib.use("TkAgg")
 root = tk.Tk()
-root.title("Frame View")
+root.title("FrameViewer")
 
 # Adding a plotting area
-fig = Figure(figsize=(3,5), dpi=120)
-ax = fig.add_subplot(111)
+fig = Figure(figsize=(3,4.8), dpi=120)
+ax = fig.add_subplot()
 ax.set_axis_off()
+fig.tight_layout()
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.draw()
-canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-fig.tight_layout()
+canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH)
 
 # Reading and parsing .sfrm file
 def read_sfrm(filename):
@@ -90,6 +92,10 @@ def read_sfrm(filename):
     data = {'pixelSize':pixSize, 'wavelength':wave, 'distance':dist, 'center':cent,
             'det2theta':0.0, 'size':sizexy, 'target':target, 
             'tilt':-twoth, 'rotation':90., 'twoth':str(round(twoth,1))}
+    
+    with open("current_header.txt", "w") as file:
+        file.write(str(data))
+    
     return lines, data, image  
 
 def open_file():
@@ -116,18 +122,19 @@ def open_file():
         ax.set_axis_off()
         canvas.draw()
 
-# Adding buttons and sliders
-button_frame = tk.Frame(root)
-button_frame.pack(side=tk.BOTTOM, fill=tk.X)
-
-contrast_slider = tk.Scale(button_frame, from_=1.5, to=0.1, 
+button_frame0 = tk.Frame(root)
+button_frame0.pack(fill=tk.X)
+contrast_slider = tk.Scale(button_frame0, from_=1.5, to=0.1, 
                            orient=tk.HORIZONTAL, resolution=0.005, showvalue=False,
-                           length=400, label="Exposure")
-contrast_slider.pack(side=tk.TOP, anchor=tk.W, padx=40, pady=10)
+                           length=400)
+contrast_slider.pack(side=tk.TOP, padx=20, anchor=tk.CENTER)
 contrast_slider.set(1)
 
+# Adding buttons 
+button_frame = tk.Frame(root)
+button_frame.pack(side=tk.BOTTOM, fill=tk.X)
 button1 = tk.Button(button_frame, text="Open", width=15, command=open_file)
-button1.pack(side=tk.LEFT, anchor=tk.W, padx=40, pady=10)
+button1.pack(side=tk.LEFT, anchor=tk.W, padx=20, pady=10)
 
 def save_as():
     last_dir = ""
@@ -139,6 +146,27 @@ def save_as():
         fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
         fig.savefig(file_path, dpi=300, bbox_inches = 'tight')
 button2 = tk.Button(button_frame, text="Save As...", width=15, command=save_as)
-button2.pack(side=tk.RIGHT, anchor=tk.E, padx=40, pady=10)
+button2.pack(side=tk.RIGHT, anchor=tk.E, padx=20, pady=10)
 
+coord_label = tk.Label(master=root)
+coord_label.pack(padx=20,anchor='w')
+coord_label2 = tk.Label(master=root)
+coord_label2.pack(padx=20, anchor='w')
+
+def on_mouse_move(event):
+    if event.xdata is not None and event.ydata is not None:
+        # Mouse is over the image area
+        x, y = int(event.xdata), int(event.ydata)
+        data_text = pathlib.Path('current_header.txt').read_text()
+        data = ast.literal_eval(data_text)
+        curr_two_theta = 2 * 180 / np.pi * np.arctan(((float(data['center'][0])-float(x)*float(data['pixelSize'][0]/1000))**2 + (float(data['center'][1])-float(y)*float(data['pixelSize'][1])/1000)**2)**0.5/float(data['distance']))
+        # Update the label with the current coordinates
+        coord_label.config(text=f'X, Y = {x}, {y}')
+        coord_label2.config(text=f'2θ = {curr_two_theta:.2f}°')
+        # Change the cursor to a crosshair
+        root.config(cursor="crosshair")
+    else:
+        root.config(cursor="")
+
+canvas.mpl_connect('motion_notify_event', on_mouse_move)
 root.mainloop()

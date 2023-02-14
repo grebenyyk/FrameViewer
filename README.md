@@ -10,4 +10,4 @@ Also check Tim Grüne's [sfrmtools](https://homepage.univie.ac.at/tim.gruene/res
 [numpy](https://numpy.org/install/), [matplotlib](https://matplotlib.org/stable/users/installing/index.html), [scikit-image](https://scikit-image.org/docs/stable/install.html)
 
 #### To be implemented later
-Pointer with live coordinates, switching through several frames in a directory, various colormaps
+Switching through several frames in a directory, various colormaps
