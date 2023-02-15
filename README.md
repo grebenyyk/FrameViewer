@@ -12,4 +12,4 @@ Live calculation of pointer 2θ value is implemented according to the [book by B
 [numpy](https://numpy.org/install/), [matplotlib](https://matplotlib.org/stable/users/installing/index.html), [scikit-image](https://scikit-image.org/docs/stable/install.html)
 
 #### To be implemented later
-Switching through several frames in a directory, various colormaps
+Various colormaps
