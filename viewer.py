@@ -72,7 +72,11 @@ def read_sfrm(filename):
     
     nxy = sizexy[0]*sizexy[1]
     cent = [cent[0]*pixSize[0]/1000.0, cent[1]*pixSize[1]/1000.0]
-    cent[0] += dist*np.tan(np.pi*twoth/180.0)
+    
+    # No center displacement to implement 2θD calculation as in [Tsymbarenko et al. JAC (2022)]
+    # as well as in [He, B. B. (2018). Two-dimensional X-ray diffraction]
+    #cent[0] += dist*np.tan(np.pi*twoth/180.0)
+    
     File.seek(imageBeg)
     img = File.read(nxy)
     img2byte = File.read(N2byte)
@@ -159,7 +163,26 @@ def on_mouse_move(event):
         x, y = int(event.xdata), int(event.ydata)
         data_text = pathlib.Path('current_header.txt').read_text()
         data = ast.literal_eval(data_text)
-        curr_two_theta = 2 * 180 / np.pi * np.arctan(((float(data['center'][0])-float(x)*float(data['pixelSize'][0]/1000))**2 + (float(data['center'][1])-float(y)*float(data['pixelSize'][1])/1000)**2)**0.5/float(data['distance']))
+        
+        # Calculation of 2theta angle
+
+        # Works only for detector poisition 2theta = 0 
+        #curr_two_theta = 2 * 180 / np.pi * np.arctan((((data['center'][0])-(x)*((data['pixelSize'][0])/1000))**2 + ((data['center'][1])-(y)*(data['pixelSize'][1])/1000)**2)**0.5/(data['distance']))    
+        
+        # as in D. Tsymbarenko et al. JAC (2022)
+        # not working as of now, probably something wrong with the code
+        xx = (data['center'][0])-(x)*((data['pixelSize'][0])/1000)
+        yy = (data['center'][1])-(y)*((data['pixelSize'][1])/1000)
+        DD = data['distance']
+        twothetad = data['twoth']
+        cos2theta = (((float(DD)**2 + xx**2)/(float(DD)**2 + xx**2 + yy**2))**0.5) * np.cos((float(twothetad) - np.arctan(xx/float(DD)) * 180 / np.pi) * np.pi / 180)
+        #curr_two_theta = np.arccos(cos2theta) * 180 / np.pi
+
+        # as in B. He. Two-dimensional X-ray diffraction (2018)
+        chisl = xx * np.sin(-float(twothetad) * np.pi / 180) + float(DD) * np.cos(-float(twothetad) * np.pi / 180)
+        znam = (float(DD)**2 + (xx)**2 + (yy)**2)**0.5
+        curr_two_theta = 2 * np.arccos(chisl/znam) * 180 / np.pi
+
         # Update the label with the current coordinates
         coord_label.config(text=f'X, Y = {x}, {y}')
         coord_label2.config(text=f'2θ = {curr_two_theta:.2f}°')
