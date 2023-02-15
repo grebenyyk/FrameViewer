@@ -10,10 +10,12 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import skimage.exposure as exposure
 import ast
+import glob
 
 matplotlib.use("TkAgg")
 root = tk.Tk()
 root.title("FrameViewer")
+root.resizable(False, False)
 
 # Adding a plotting area
 fig = Figure(figsize=(3,4.8), dpi=120)
@@ -102,29 +104,45 @@ def read_sfrm(filename):
     
     return lines, data, image  
 
+def load_file(file_path):
+    last_dir = os.path.dirname(file_path)
+    dir_path, filename = os.path.split(file_path)
+    dirs = dir_path.split(os.path.sep)
+    last_two_dirs = os.path.sep.join(dirs[-2:])
+    result = f".../{last_two_dirs}{os.path.sep}{filename}"
+    label3.config(text=f'{result}')
+    with open("last_dir.txt", "w") as file:
+        file.write(last_dir)
+    ax.clear()
+    lines, data, image = read_sfrm(file_path)
+
+    def update_gamma(*args):
+        gamma = contrast_slider.get()
+        image_upd = exposure.adjust_gamma(image, gamma=gamma)
+        im = ax.imshow(image_upd, extent=(0, image.shape[1], 0, image.shape[0]), cmap='hot')
+        canvas.draw()
+        contrast_slider.bind("<ButtonRelease-1>", update_gamma)
+    update_gamma()
+
+    ax.set_axis_off()
+    canvas.draw()
+
+# Function to open the file dialog and select a file
 def open_file():
+    global file_index, file_list
     last_dir = ""
     with contextlib.suppress(Exception):
         with open("last_dir.txt", "r") as file:
             last_dir = file.read()
-    file_path = filedialog.askopenfilename(initialdir = last_dir, title = "Select file", filetypes = (("Bruker frames", "*.sfrm"), ("all files", "*.*")))
+    file_path = filedialog.askopenfilename(initialdir=last_dir, title="Select file", filetypes=(("Bruker frames", "*.sfrm"), ("all files", "*.*")))
     if file_path:
         last_dir = os.path.dirname(file_path)
         with open("last_dir.txt", "w") as file:
             file.write(last_dir)
-        ax.clear()
-        lines, data, image = read_sfrm(file_path)
+        file_index = 0
+        file_list = sorted(glob.glob(os.path.join(last_dir, '*.sfrm')))
+        load_file(file_path)
 
-        def update_gamma(*args):
-            gamma = contrast_slider.get()
-            image_upd = exposure.adjust_gamma(image, gamma=gamma)
-            im = ax.imshow(image_upd, extent=(0, image.shape[1], 0, image.shape[0]), cmap='hot')
-            canvas.draw()
-            contrast_slider.bind("<ButtonRelease-1>", update_gamma)
-        update_gamma()
-
-        ax.set_axis_off()
-        canvas.draw()
 
 button_frame0 = tk.Frame(root)
 button_frame0.pack(fill=tk.X)
@@ -137,7 +155,7 @@ contrast_slider.set(1)
 # Adding buttons 
 button_frame = tk.Frame(root)
 button_frame.pack(side=tk.BOTTOM, fill=tk.X)
-button1 = tk.Button(button_frame, text="Open", width=15, command=open_file)
+button1 = tk.Button(button_frame, text="Open", width=20, command=open_file)
 button1.pack(side=tk.LEFT, anchor=tk.W, padx=20, pady=10)
 
 def save_as():
@@ -149,13 +167,46 @@ def save_as():
     if file_path:
         fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
         fig.savefig(file_path, dpi=300, bbox_inches = 'tight')
-button2 = tk.Button(button_frame, text="Save As...", width=15, command=save_as)
+button2 = tk.Button(button_frame, text="Save As...", width=20, command=save_as)
 button2.pack(side=tk.RIGHT, anchor=tk.E, padx=20, pady=10)
 
 coord_label = tk.Label(master=root)
 coord_label.pack(padx=20,anchor='w')
 coord_label2 = tk.Label(master=root)
 coord_label2.pack(padx=20, anchor='w')
+label3 = tk.Label(master=root)
+label3.pack(padx=20, anchor='w')
+
+# Global variables
+file_index = 0
+file_list = []
+# Function to load the next file in the directory
+def load_next_file():
+    global file_index, file_list
+    if file_index < len(file_list) - 1:
+        file_index += 1
+    else:
+        file_index = 0
+    file_path = file_list[file_index]
+    load_file(file_path)
+
+# Function to load the previous file in the directory
+def load_previous_file():
+    global file_index, file_list
+    if file_index > 0:
+        file_index -= 1
+    else:
+        file_index = len(file_list) - 1
+    file_path = file_list[file_index]
+    load_file(file_path)
+
+# Create left arrow button
+left_arrow_button = tk.Button(root, text='Previous file', command=load_previous_file, width=20)
+left_arrow_button.pack(side=tk.LEFT, padx=20)
+
+# Create right arrow button
+right_arrow_button = tk.Button(root, text='Next file', command=load_next_file, width=20)
+right_arrow_button.pack(side=tk.RIGHT,padx=20)
 
 def on_mouse_move(event):
     if event.xdata is not None and event.ydata is not None:
