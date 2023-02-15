@@ -1,1 +1,1 @@
-{'pixelSize': [135, 135], 'wavelength': 0.70926, 'distance': 77.13428, 'center': [51.02520749999999, 68.56158599999999], 'det2theta': 0.0, 'size': [768, 1024], 'target': 'Mo', 'tilt': -332.0, 'rotation': 90.0, 'twoth': '332.0'}
+{'pixelSize': [135, 135], 'wavelength': 0.70926, 'distance': 89.06014, 'center': [51.33646350000001, 68.5349505], 'det2theta': 0.0, 'size': [768, 1024], 'target': 'Mo', 'tilt': -0.0, 'rotation': 90.0, 'twoth': '0.0'}
