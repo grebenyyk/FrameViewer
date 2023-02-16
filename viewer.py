@@ -98,10 +98,8 @@ def read_sfrm(filename):
     data = {'pixelSize':pixSize, 'wavelength':wave, 'distance':dist, 'center':cent,
             'det2theta':0.0, 'size':sizexy, 'target':target, 
             'tilt':-twoth, 'rotation':90., 'twoth':str(round(twoth,1))}
-    
     with open("current_header.txt", "w") as file:
         file.write(str(data))
-    
     return lines, data, image  
 
 def load_file(file_path):
@@ -116,14 +114,24 @@ def load_file(file_path):
     ax.clear()
     lines, data, image = read_sfrm(file_path)
 
-    def update_gamma(*args):
-        gamma = contrast_slider.get()
-        image_upd = exposure.adjust_gamma(image, gamma=gamma)
+    # def update_gamma(*args):
+        # gamma = contrast_slider.get()
+        # image_upd = exposure.adjust_gamma(image, gamma=gamma)
+        # im = ax.imshow(image_upd, extent=(0, image.shape[1], 0, image.shape[0]), cmap='hot')
+        # canvas.draw()
+        # contrast_slider.bind("<ButtonRelease-1>", update_gamma)
+    # update_gamma()
+
+    def update_contrast(*args):
+        black_level = black_slider.get()
+        white_level = white_slider.get()
+        p2, p98 = np.percentile(image, (black_level * 100, white_level * 100))
+        image_upd = exposure.rescale_intensity(image, in_range=(p2, p98))
         im = ax.imshow(image_upd, extent=(0, image.shape[1], 0, image.shape[0]), cmap='hot')
         canvas.draw()
-        contrast_slider.bind("<ButtonRelease-1>", update_gamma)
-    update_gamma()
-
+        black_slider.bind("<ButtonRelease-1>", update_contrast)
+        white_slider.bind("<ButtonRelease-1>", update_contrast)
+    update_contrast()
     ax.set_axis_off()
     canvas.draw()
 
@@ -143,14 +151,20 @@ def open_file():
         file_list = sorted(glob.glob(os.path.join(last_dir, '*.sfrm')))
         load_file(file_path)
 
-
-button_frame0 = tk.Frame(root)
+button_frame0 = tk.Frame(root, height=20)
 button_frame0.pack(fill=tk.X)
-contrast_slider = tk.Scale(button_frame0, from_=1.5, to=0.1, 
-                           orient=tk.HORIZONTAL, resolution=0.005, showvalue=False,
-                           length=400)
-contrast_slider.pack(side=tk.TOP, padx=20, anchor=tk.CENTER)
-contrast_slider.set(1)
+bg_color = '#f0f0f0'
+black_slider = tk.Scale(button_frame0, from_=0.55, to=0, 
+                        orient=tk.HORIZONTAL, resolution=0.005, showvalue=False,
+                        length=200, width=15, troughcolor=bg_color)
+black_slider.set(0)
+black_slider.place(relx=0.05, rely=0.5, anchor=tk.W)
+
+white_slider = tk.Scale(button_frame0, from_=1, to=0.6, 
+                        orient=tk.HORIZONTAL, resolution=0.005, showvalue=False,
+                        length=200, width=15, troughcolor=bg_color)
+white_slider.set(1)
+white_slider.place(relx=0.95, rely=0.5, anchor=tk.E)
 
 # Adding buttons 
 button_frame = tk.Frame(root)
@@ -177,7 +191,7 @@ coord_label2.pack(padx=20, anchor='w')
 label3 = tk.Label(master=root)
 label3.pack(padx=20, anchor='w')
 
-# Global variables
+# Global variables for switching through files
 file_index = 0
 file_list = []
 # Function to load the next file in the directory
@@ -189,7 +203,6 @@ def load_next_file():
         file_index = 0
     file_path = file_list[file_index]
     load_file(file_path)
-
 # Function to load the previous file in the directory
 def load_previous_file():
     global file_index, file_list
@@ -203,7 +216,6 @@ def load_previous_file():
 # Create left arrow button
 left_arrow_button = tk.Button(root, text='Previous file', command=load_previous_file, width=20)
 left_arrow_button.pack(side=tk.LEFT, padx=20)
-
 # Create right arrow button
 right_arrow_button = tk.Button(root, text='Next file', command=load_next_file, width=20)
 right_arrow_button.pack(side=tk.RIGHT,padx=20)
