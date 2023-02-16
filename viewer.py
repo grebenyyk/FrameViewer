@@ -6,6 +6,7 @@ import numpy as np
 import os
 import time
 import matplotlib
+from matplotlib import cm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import skimage.exposure as exposure
@@ -25,6 +26,12 @@ fig.tight_layout()
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.draw()
 canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH)
+
+#colormap_names = [m for m in cm.datad]
+colormap_names = ['hot', 'viridis', 'gray', 'plasma', 'inferno', 'gnuplot', 'cividis']
+colormap_var = tk.StringVar()
+colormap_var.set('hot')
+colormap_dropdown = tk.OptionMenu(root, colormap_var, *colormap_names)
 
 # Reading and parsing .sfrm file
 def read_sfrm(filename):
@@ -87,9 +94,9 @@ def read_sfrm(filename):
     img = np.array(np.frombuffer(img, dtype='u1'), dtype=np.int32)
     img2byte = np.array(np.frombuffer(img2byte, dtype="u2"), dtype=np.int32)
     img4byte = np.array(np.frombuffer(img4byte, dtype="u4"), dtype=np.int32)
-    #ins2byte = np.argwhere(img == 255)
-    #for j,i in enumerate(list(ins2byte)):
-    #    img[i] = img2byte[j]
+    ins2byte = np.argwhere(img == 255)
+    for j,i in enumerate(list(ins2byte)):
+        img[i] = img2byte[j]
     ins4byte = np.argwhere(img == 65535)
     for j,i in enumerate(list(ins4byte)):
         img[i] = img4byte[j]
@@ -106,7 +113,7 @@ def load_file(file_path):
     last_dir = os.path.dirname(file_path)
     dir_path, filename = os.path.split(file_path)
     dirs = dir_path.split(os.path.sep)
-    last_two_dirs = os.path.sep.join(dirs[-2:])
+    last_two_dirs = os.path.sep.join(dirs[-1:])
     result = f".../{last_two_dirs}{os.path.sep}{filename}"
     label3.config(text=f'{result}')
     with open("last_dir.txt", "w") as file:
@@ -121,17 +128,21 @@ def load_file(file_path):
         # canvas.draw()
         # contrast_slider.bind("<ButtonRelease-1>", update_gamma)
     # update_gamma()
-
+    
     def update_contrast(*args):
         black_level = black_slider.get()
         white_level = white_slider.get()
         p2, p98 = np.percentile(image, (black_level * 100, white_level * 100))
         image_upd = exposure.rescale_intensity(image, in_range=(p2, p98))
         im = ax.imshow(image_upd, extent=(0, image.shape[1], 0, image.shape[0]), cmap='hot')
+        cmap_name = colormap_var.get()
+        cmap = cm.get_cmap(cmap_name)
+        im.set_cmap(cmap)
         canvas.draw()
         black_slider.bind("<ButtonRelease-1>", update_contrast)
         white_slider.bind("<ButtonRelease-1>", update_contrast)
     update_contrast()
+    colormap_var.trace("w", update_contrast)
     ax.set_axis_off()
     canvas.draw()
 
@@ -165,6 +176,9 @@ white_slider = tk.Scale(button_frame0, from_=1, to=0.6,
                         length=200, width=15, troughcolor=bg_color)
 white_slider.set(1)
 white_slider.place(relx=0.95, rely=0.5, anchor=tk.E)
+colormap_dropdown.place(relx=0.74, rely=0.83)
+colormap_label = tk.Label(root, text="Colormap:")
+colormap_label.place(relx=0.57, rely=0.831)
 
 # Adding buttons 
 button_frame = tk.Frame(root)
