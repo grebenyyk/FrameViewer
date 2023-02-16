@@ -1,5 +1,5 @@
 # FrameViewer
-<img src="/CeO2.png" width="300">
+<img src="/FV_window.png" width="300">
 
 Minimalist GUI to dispaly Siemens Frame Format (SFRM) files. The parser is implemented according to [GSAS2 SFRM parser](https://gsas-ii.readthedocs.io/en/latest/_modules/G2img_SFRM.html#GetSFRMData). Also check Tim Grüne's [sfrmtools](https://homepage.univie.ac.at/tim.gruene/research/programs/conv/sfrmtools/) for additional reference on the SFRM frame format. 
 
